@@ -1,31 +1,12 @@
-// FAKE DATA for learning. In phase 1, this data will come from your FastAPI backend.
+// FAKE DATA for learning. Later, this data will come from your FastAPI backend.
 
-export type Candidate = {
-  userId: string;
-  name: string;
-  firstName: string;
-  title: string;
-  fileName: string;
-};
-
-const candidates: Candidate[] = [
-  {
+// Step 3 will link your Google account to your own resume.
+// Until then, every logged-in user sees this sample resume.
+export async function getMyResume() {
+  return {
     userId: "rishabh-jain-4821",
-    name: "Rishabh Jain",
-    firstName: "Rishabh",
-    title: "Senior Software Engineer",
     fileName: "Rishabh_Jain_Resume.pdf",
-  },
-];
-
-export async function getCandidate(userId: string) {
-  // Later this will be: await fetch(`${BACKEND_URL}/candidates/${userId}`)
-  return candidates.find((candidate) => candidate.userId === userId) ?? null;
-}
-
-export async function getLoggedInCandidate() {
-  // Fake login: we always return the sample candidate.
-  return candidates[0];
+  };
 }
 
 export async function getHrActivity() {

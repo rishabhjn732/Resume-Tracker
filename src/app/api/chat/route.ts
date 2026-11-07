@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { DAILY_QUESTION_LIMIT, limitSteps } from "@/lib/limits";
 import { runMockAgent } from "@/lib/mock-agent";
-import { getCandidate } from "@/lib/mock-data";
+import { getCandidate } from "@/lib/backend";
 import { HR_COOKIE } from "@/lib/session";
 import {
   addMessages,
@@ -20,7 +20,8 @@ const MAX_LENGTH = { question: 1000, book: 100, jd: 10000 };
 
 // LEARN (Route Handler): This file creates the API URL POST /api/chat.
 // The folder path makes the URL, and the function name is the HTTP method.
-// Later, this route will send the request to FastAPI and LangGraph.
+// The candidate comes from the backend, but the answer still comes from the fake agent.
+// Later, this route will send the question to FastAPI and LangGraph.
 export async function POST(request: Request) {
   let body: ChatRequest;
   try {

@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { getCandidate } from "./mock-data";
+import { getCandidate } from "./backend";
 
 export const HR_COOKIE = "hr_phone";
 
-// Find the candidate from the URL. If the ID is wrong, show the 404 page.
+// Find the candidate from the URL, using the backend.
+// If the ID is wrong, show the 404 page.
 export async function requireCandidate(userId: string) {
   const candidate = await getCandidate(userId);
   if (!candidate) notFound();

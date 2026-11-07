@@ -1,5 +1,21 @@
 // Shared TypeScript types. A type describes the shape of our data.
 
+// The logged-in candidate, from GET /api/me on the backend.
+export type User = {
+  id: number;
+  email: string;
+  name: string;
+  pictureUrl: string | null;
+};
+
+// A candidate whose resume HR can chat with, from GET /api/candidates/{userId}.
+export type Candidate = {
+  userId: string;
+  name: string;
+  title: string;
+  firstName: string;
+};
+
 export type Tone = "ok" | "warn" | "muted";
 
 export type AgentStep = {

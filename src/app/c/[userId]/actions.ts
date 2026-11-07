@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCandidate } from "@/lib/mock-data";
+import { getCandidate } from "@/lib/backend";
 import { HR_COOKIE, requireHrPhone } from "@/lib/session";
 import { getOrCreateEmptyThread } from "@/lib/store";
 

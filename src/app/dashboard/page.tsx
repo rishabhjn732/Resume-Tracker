@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
+import { logout } from "@/app/actions";
 import { CopyLinkButton } from "@/components/CopyLinkButton";
 import { ResumeUpload } from "@/components/ResumeUpload";
-import { getHrActivity, getLoggedInCandidate } from "@/lib/mock-data";
+import { requireUser } from "@/lib/auth";
+import { getHrActivity, getMyResume } from "@/lib/mock-data";
 
 export const metadata: Metadata = { title: "Dashboard | Resume Assistant" };
 
@@ -11,34 +13,57 @@ export const metadata: Metadata = { title: "Dashboard | Resume Assistant" };
 // LEARN (Server Component): This has no "use client", so it runs only on the server.
 // It can be async and can get data directly with await.
 export default async function DashboardPage() {
-  const candidate = await getLoggedInCandidate();
+  // Real user from the backend (GET /api/me). Not logged in? requireUser goes to "/".
+  const user = await requireUser();
+  const firstName = user.name.split(" ")[0];
+  const initials = user.name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  // Still sample data. Step 3 links your account to your own resume.
+  const resume = await getMyResume();
   const activity = await getHrActivity();
 
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "localhost:3000";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "http";
-  const sharePath = `/c/${candidate.userId}`;
+  const sharePath = `/c/${resume.userId}`;
   const shareLink = `${protocol}://${host}${sharePath}`;
 
   return (
     <>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-4 py-3 md:px-12">
         <div className="font-semibold">Resume Assistant</div>
-        <div className="flex items-center gap-4 text-sm">
-          <span>{candidate.name}</span>
-          <Link href="/" className="inline-flex min-h-11 items-center text-accent underline">
-            Log out
-          </Link>
+        <div className="flex min-w-0 items-center gap-3 text-sm">
+          <div
+            aria-hidden="true"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-white"
+          >
+            {initials}
+          </div>
+          <div className="flex min-w-0 flex-col">
+            <span className="font-medium break-words">{user.name}</span>
+            <span className="text-muted break-all">{user.email}</span>
+          </div>
+          {/* A form can call a Server Action directly. */}
+          <form action={logout}>
+            <button type="submit" className="inline-flex min-h-11 items-center px-2 text-accent underline">
+              Log out
+            </button>
+          </form>
         </div>
       </header>
 
       <main className="mx-auto flex max-w-[1240px] flex-col gap-6 p-4 md:p-12">
-        <h1 className="text-3xl font-semibold">Your resume chat</h1>
+        <h1 className="text-3xl font-semibold">Hi, {firstName}</h1>
 
         <div className="flex flex-wrap gap-6">
           <section className="flex min-w-0 flex-[1_1_420px] flex-col gap-5 rounded-xl border border-line bg-white p-6">
             <h2 className="text-xl font-semibold">Resume and work history</h2>
-            <ResumeUpload fileName={candidate.fileName} />
+            <ResumeUpload fileName={resume.fileName} />
           </section>
 
           <section className="flex min-w-0 flex-[1_1_420px] flex-col gap-5 rounded-xl border border-line bg-white p-6">
@@ -61,7 +86,7 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="min-w-0 rounded-lg bg-ground p-4">
                 <div className="text-sm text-muted">User ID</div>
-                <div className="mt-1 font-mono text-sm font-medium break-words">{candidate.userId}</div>
+                <div className="mt-1 font-mono text-sm font-medium break-words">{resume.userId}</div>
               </div>
               <div className="min-w-0 rounded-lg bg-ground p-4">
                 <div className="text-sm text-muted">Limit for each HR</div>

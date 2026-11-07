@@ -1,5 +1,4 @@
-import type { Candidate } from "./mock-data";
-import type { AgentStep, Card, JdRow } from "./types";
+import type { AgentStep, Candidate, Card, JdRow } from "./types";
 
 // FAKE AGENT: no LLM and no vector search. It only checks for words.
 // This lets you build and learn the frontend before the real backend exists.

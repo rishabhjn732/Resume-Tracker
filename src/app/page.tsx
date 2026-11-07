@@ -1,7 +1,14 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { GoogleLoginButton } from "@/components/GoogleLoginButton";
+import { getCurrentUser } from "@/lib/auth";
 
 // LEARN (routing): This file is src/app/page.tsx, so its URL is "/".
-export default function LoginPage() {
+export default async function LoginPage() {
+  // If you are already logged in, go straight to the dashboard.
+  // If the backend is down, still show this page, so the user sees the button.
+  const user = await getCurrentUser().catch(() => null);
+  if (user) redirect("/dashboard");
+
   return (
     <div className="flex min-h-screen flex-wrap">
       <section className="flex min-w-0 flex-[1_1_420px] flex-col justify-between gap-12 bg-ink p-6 text-white md:p-16">
@@ -28,16 +35,7 @@ export default function LoginPage() {
             <p className="text-muted">HR does not need this page. HR opens your shared link.</p>
           </div>
 
-          {/* LEARN (Link): Link changes the page without a full browser reload. */}
-          <Link
-            href="/dashboard"
-            className="flex min-h-12 items-center justify-center rounded-lg bg-accent px-4 font-medium text-white hover:bg-accent-strong"
-          >
-            Continue with Google
-          </Link>
-          <p className="rounded-lg bg-warn-soft p-3 text-sm text-warn">
-            Demo: real login is not connected yet. This button only opens the dashboard.
-          </p>
+          <GoogleLoginButton />
         </div>
       </section>
     </div>
