@@ -8,7 +8,10 @@ import { getHrOverview, getResume, getResumes } from "@/lib/backend";
 
 export const metadata: Metadata = { title: "HR and interviews | Resume Assistant" };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ calendar?: string }>;
+};
 
 // The site's own address, like "https://my-resume-tracker.vercel.app", to build the share link.
 // Vercel sends the real host in x-forwarded-host.
@@ -20,8 +23,11 @@ async function siteOrigin() {
 }
 
 // URL: /dashboard/resumes/12/hr  (the "HR and interviews" tab)
-export default async function HrPage({ params }: Props) {
+export default async function HrPage({ params, searchParams }: Props) {
   const { id } = await params;
+  // After Google Calendar, the backend sends the browser back with ?calendar=connected or ?calendar=error.
+  const { calendar } = await searchParams;
+  const calendarNotice = calendar === "connected" || calendar === "error" ? calendar : null;
   if (!/^\d+$/.test(id)) notFound();
 
   const { user, token } = await requireSession();
@@ -44,6 +50,7 @@ export default async function HrPage({ params }: Props) {
           status={resume.status}
           overview={overview}
           origin={origin}
+          calendarNotice={calendarNotice}
         />
       </main>
     </>

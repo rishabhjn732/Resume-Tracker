@@ -1,6 +1,6 @@
 # Resume Assistant: Frontend
 
-This is a Next.js project for learning. Login and resumes come from the FastAPI backend. The old HR chat demo under `/c/...` still uses a fake agent.
+This is a Next.js project for learning. Everything comes from the FastAPI backend: login, resumes, the test chat, and the HR chat with Google Calendar booking.
 
 ## Run the project
 
@@ -22,8 +22,10 @@ Try this flow:
 
 1. Click the Google button and sign in.
 2. Upload a PDF or DOCX resume. Watch the 5 steps while it is read.
-3. Open **Test chat** and ask a few questions (needs the chat API, see below).
-4. Open **HR and interviews** to copy your HR link (needs the HR API, see below).
+3. Open **Test chat** and ask a few questions.
+4. Open **HR and interviews**. Click **Connect Google Calendar** and set your free times.
+5. Click **Preview as HR** (or open the link in a private window). Enter a phone number, ask about the resume, then ask to book a call and pick a time.
+6. Back on **HR and interviews**, the call shows under Interviews with its Google Meet link.
 
 To learn from the code, search for `LEARN` in the `src` folder.
 
@@ -35,22 +37,22 @@ To learn from the code, search for `LEARN` in the `src` folder.
 | `/dashboard` | Opens your newest resume, or the first upload | `src/app/dashboard/page.tsx` |
 | `/dashboard/resumes/12` | **My resume**: list, upload, live steps, summary | `src/app/dashboard/resumes/[id]/page.tsx` → `ResumeView.tsx` |
 | `/dashboard/resumes/12/chat` | **Test chat**: 8 test questions with right/wrong checks | `.../[id]/chat/page.tsx` → `TestChat.tsx` |
-| `/dashboard/resumes/12/hr` | **HR and interviews**: link, interviews, HR activity | `.../[id]/hr/page.tsx` → `HrOverviewView.tsx` |
-| `/c/...` | Old HR chat demo (fake agent) | `src/app/c/[userId]/...` |
+| `/dashboard/resumes/12/hr` | **HR and interviews**: link, Google Calendar, free times, interviews, HR activity | `.../[id]/hr/page.tsx` → `HrOverviewView.tsx`, `CalendarCard.tsx`, `AvailabilityEditor.tsx` |
+| `/hr/AbC123` | **The link you send to HR**: whose resume, phone number | `src/app/hr/[shareId]/page.tsx` → `HrStartForm.tsx` |
+| `/hr/AbC123/chat/5` | **HR chat**: chats, answers, free times, booking | `src/app/hr/[shareId]/chat/[threadId]/page.tsx` → `HrChat.tsx` |
+| `/c/...` | Old HR chat demo with a fake agent. You can delete it (see below) | `src/app/c/[userId]/...` |
 
 The browser never calls FastAPI directly. It calls the Next.js routes in `src/app/api/`, and they pass the request on with the login token (`src/lib/relay.ts`).
 
-## APIs the backend must add next
+## Backend APIs
 
-The Test chat and HR pages are built, but the backend doesn't have these APIs yet. Until it does, those pages say "not switched on yet". All of them need `Authorization: Bearer <token>`, and only the resume's owner may use them. The types are in `src/lib/types.ts`.
+The full list is in the backend README. The types are in `src/lib/types.ts`.
 
-| Method and URL | Body | Answer |
-|---|---|---|
-| `GET /api/resumes/{id}/test-chat` | none | `{ limit: 8, used, messages: TestChatMessage[] }` |
-| `POST /api/resumes/{id}/test-chat` | `{ question }` | `201` with one `TestChatMessage`, or `429` when all 8 are used |
-| `PUT /api/resumes/{id}/test-chat/{messageId}/feedback` | `{ verdict: "right" \| "wrong" \| null }` | `204` |
-| `GET /api/resumes/{id}/hr` | none | `{ shareId, linkEnabled, dailyQuestionLimit, freeTimes, interviews, people }` |
-| `PATCH /api/resumes/{id}/hr` | `{ linkEnabled }` | `200` |
+| Page | Backend URLs |
+|---|---|
+| Test chat | `GET/POST /api/resumes/{id}/test-chat`, `PUT .../test-chat/{messageId}/feedback` |
+| HR and interviews | `GET/PATCH /api/resumes/{id}/hr`, `PUT /api/me/availability`, `POST /api/calendar/google/connect`, `DELETE /api/calendar/google` |
+| HR link and chat | `/api/public/shares/{shareId}/...` (no candidate login) |
 
 A `TestChatMessage` is:
 
@@ -71,7 +73,18 @@ A `TestChatMessage` is:
 }
 ```
 
-`outcome` is `answered`, `not_found` (the resume doesn't say) or `blocked` (the guardrail stopped an off-topic question). A step's `status` is `passed`, `warning` or `skipped`.
+`outcome` is `answered`, `not_found` (the resume doesn't say) or `blocked` (the guardrail stopped an off-topic question). A step's `status` is `passed`, `warning` or `skipped`. An HR message has the same fields, plus `slots` (free times offered) and `interview` (the booked call). Its `outcome` can also be `slots` or `booked`.
+
+## How the HR side works
+
+1. HR opens `/hr/{shareId}` and types a phone number. The `startHrChat` Server Action (`src/app/hr/[shareId]/actions.ts`) sends it to `POST /api/public/shares/{shareId}/visitors` and saves the HR token in an httpOnly cookie named `hr_<shareId>`. Each link has its own cookie, so the candidate's own login cookie is never used here.
+2. `HrChat.tsx` sends questions to `src/app/api/hr/[shareId]/...`. Those routes add the HR token (`src/lib/hr-relay.ts`) and pass the request to the backend.
+3. When HR asks to book, the backend answers with free times. HR picks one, types a name and email, and clicks **Confirm**. Only then is the call booked: the AI never books by itself.
+4. **Connect Google Calendar** (`CalendarCard.tsx`) gets Google's consent URL from the backend and opens it. After **Allow**, Google sends the browser to the backend, and the backend sends it back to `/dashboard/resumes/12/hr?calendar=connected`.
+
+### Remove the old demo
+
+The old fake HR demo is no longer used. You can delete `src/app/c/` and any `src/lib` files that only it imports (search for `from "@/lib/` inside `src/app/c/` first).
 
 ## How login works
 
@@ -87,8 +100,8 @@ All backend calls are in `src/lib/backend.ts`. They run on the Next.js server, n
 
 In the Vercel project, open **Settings → Environment Variables** and add `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `BACKEND_URL`. Then redeploy, because `NEXT_PUBLIC_` values are added when the app is built.
 
-`BACKEND_URL` must be a backend on the internet, not `localhost`. Until the backend is hosted, login and the HR pages won't work on Vercel.
+`BACKEND_URL` must be a backend on the internet, not `localhost`.
 
-Server memory is cleared on every restart, so this version should not be used as a real deployed app.
+On the backend (Railway), set `FRONTEND_URL` to your Vercel address, so Google Calendar sends you back to the right site.
 
-Phone entry has no OTP. Add OTP before real recruiters use the app, because anyone who enters another person's number can open that person's chats.
+HR phone numbers have no OTP. Anyone who types another person's number on the same link can open that person's chats. Add OTP before many real recruiters use the app.

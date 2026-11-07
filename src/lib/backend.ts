@@ -1,4 +1,4 @@
-import type { Candidate, HrOverview, ResumeDetail, ResumeList, TestChat, User } from "./types";
+import type { Candidate, HrMe, HrOverview, HrThread, PublicShare, ResumeDetail, ResumeList, TestChat, User } from "./types";
 
 // LEARN (server-only code): Only Server Components, Server Actions and Route Handlers
 // use this file. BACKEND_URL has no NEXT_PUBLIC_ prefix, so the browser never sees it.
@@ -106,5 +106,34 @@ export async function getHrOverview(token: string, id: number): Promise<HrOvervi
   const response = await callBackend(`/api/resumes/${id}/hr`, { headers: authHeader(token) });
   if (NOT_BUILT_YET.includes(response.status)) return null;
   if (!response.ok) throw new BackendError("Could not load HR activity.", response.status);
+  return response.json();
+}
+
+// ----- The HR side. These use an HR token (from the phone number), not a candidate login. -----
+
+// GET /api/public/shares/{shareId}: the candidate's name, and whether the chat is open. No login needed.
+export async function getPublicShare(shareId: string): Promise<PublicShare | null> {
+  const response = await callBackend(`/api/public/shares/${encodeURIComponent(shareId)}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new BackendError("Could not open this link.", response.status);
+  return response.json();
+}
+
+// Returns null when the HR token is missing, wrong or expired (then HR enters the phone again).
+export async function getHrMe(shareId: string, hrToken: string): Promise<HrMe | null> {
+  const response = await callBackend(`/api/public/shares/${encodeURIComponent(shareId)}/me`, {
+    headers: authHeader(hrToken),
+  });
+  if (response.status === 401) return null;
+  if (!response.ok) throw new BackendError("Could not load your chats.", response.status);
+  return response.json();
+}
+
+export async function getHrThread(shareId: string, hrToken: string, threadId: number): Promise<HrThread | null> {
+  const response = await callBackend(`/api/public/shares/${encodeURIComponent(shareId)}/threads/${threadId}`, {
+    headers: authHeader(hrToken),
+  });
+  if (response.status === 401 || response.status === 404) return null;
+  if (!response.ok) throw new BackendError("Could not load the chat.", response.status);
   return response.json();
 }

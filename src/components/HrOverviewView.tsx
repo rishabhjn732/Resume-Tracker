@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { AvailabilityEditor } from "@/components/AvailabilityEditor";
+import { CalendarCard } from "@/components/CalendarCard";
 import { ResumePicker } from "@/components/ResumePicker";
 import { dateParts, formatDate, formatTimeRange } from "@/lib/format";
 import type { HrInterview, HrOverview, ResumeListItem, ResumeStatus } from "@/lib/types";
@@ -12,6 +14,7 @@ type Props = {
   // null: the backend has no HR API yet.
   overview: HrOverview | null;
   origin: string; // like "https://my-resume-tracker.vercel.app"
+  calendarNotice: "connected" | "error" | null;
 };
 
 function HowItWorks({ dailyLimit }: { dailyLimit: number }) {
@@ -94,25 +97,39 @@ function InterviewItem({ interview }: { interview: HrInterview }) {
           </span>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusLook}`}>{statusText}</span>
         </div>
-        <span className="font-mono text-sm">HR {interview.hrPhone}</span>
+        <span className="text-sm">
+          <span className="font-medium">{interview.hrName}</span>{" "}
+          <span className="break-all text-muted">· {interview.hrEmail}</span>
+        </span>
+        <span className="font-mono text-sm text-muted">HR {interview.hrPhone}</span>
         {interview.topics.length > 0 ? (
-          <span className="text-sm text-muted">Asked about: {interview.topics.join(", ")}</span>
+          <span className="text-sm text-muted">Asked about: {interview.topics.join("; ")}</span>
         ) : null}
+        {interview.calendarNote ? <span className="text-sm text-warn">{interview.calendarNote}</span> : null}
         {upcoming ? (
-          <button
-            type="button"
-            onClick={addToCalendar}
-            className="min-h-8 self-start text-sm font-medium text-accent underline"
-          >
-            Add to calendar
-          </button>
+          <div className="flex flex-wrap gap-x-4">
+            {interview.meetLink ? (
+              <a href={interview.meetLink} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center text-sm font-medium">
+                Join Google Meet
+              </a>
+            ) : null}
+            {!interview.meetLink ? (
+              <button
+                type="button"
+                onClick={addToCalendar}
+                className="min-h-8 text-sm font-medium text-accent underline"
+              >
+                Add to calendar
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </li>
   );
 }
 
-export function HrOverviewView({ resumeId, resumes, status, overview, origin }: Props) {
+export function HrOverviewView({ resumeId, resumes, status, overview, origin, calendarNotice }: Props) {
   const [linkEnabled, setLinkEnabled] = useState(overview?.linkEnabled ?? false);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -145,7 +162,7 @@ export function HrOverviewView({ resumeId, resumes, status, overview, origin }: 
     );
   }
 
-  const shareUrl = `${origin}/c/${overview.shareId}`;
+  const shareUrl = `${origin}/hr/${overview.shareId}`;
   const upcoming = overview.interviews.filter((interview) => interview.status === "booked");
   const past = overview.interviews.filter((interview) => interview.status !== "booked");
   const shown = tab === "upcoming" ? upcoming : past;
@@ -243,7 +260,7 @@ export function HrOverviewView({ resumeId, resumes, status, overview, origin }: 
               <span aria-live="polite">{copied ? "Copied" : "Copy link"}</span>
             </button>
             <a
-              href={`/c/${overview.shareId}`}
+              href={`/hr/${overview.shareId}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex min-h-[46px] items-center rounded-lg border border-ink px-[18px] text-[15px] font-medium text-ink no-underline hover:bg-ground hover:text-ink"
@@ -272,6 +289,11 @@ export function HrOverviewView({ resumeId, resumes, status, overview, origin }: 
         <HowItWorks dailyLimit={overview.dailyQuestionLimit} />
       </section>
 
+      <div className="flex flex-wrap items-stretch gap-6">
+        <CalendarCard status={overview.calendar} returnTo={`/dashboard/resumes/${resumeId}/hr`} notice={calendarNotice} />
+        <AvailabilityEditor availability={overview.availability} freeTimes={overview.freeTimes} />
+      </div>
+
       <div className="flex flex-wrap items-start gap-6">
         <section
           aria-labelledby="interviews-title"
@@ -299,11 +321,6 @@ export function HrOverviewView({ resumeId, resumes, status, overview, origin }: 
               ))}
             </ul>
           )}
-          {overview.freeTimes ? (
-            <p className="rounded-lg bg-ground px-3.5 py-3 text-sm">
-              <span className="text-muted">Your free times:</span> {overview.freeTimes}
-            </p>
-          ) : null}
         </section>
 
         <section

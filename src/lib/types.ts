@@ -197,8 +197,30 @@ export type HrInterview = {
   startsAt: string;
   endsAt: string;
   hrPhone: string; // already masked by the backend, like "+91 98••• ••210"
+  hrName: string;
+  hrEmail: string;
   topics: string[];
   status: "booked" | "done" | "cancelled";
+  meetLink: string | null;
+  calendarNote: string | null; // why no Google event was made, if it failed
+};
+
+export type CalendarStatus = {
+  configured: boolean; // the server has the Google settings
+  connected: boolean;
+  email: string | null;
+  problem: string | null; // like "Google stopped accepting the calendar login. Please connect again."
+};
+
+// Your working hours. HR can only book inside them.
+export type Availability = {
+  timezone: string;
+  workDays: number[]; // 0 = Monday ... 6 = Sunday
+  workStart: string; // "10:00"
+  workEnd: string;
+  slotMinutes: number;
+  minNoticeHours: number;
+  daysAhead: number;
 };
 
 export type HrPerson = {
@@ -212,7 +234,65 @@ export type HrOverview = {
   shareId: string;
   linkEnabled: boolean;
   dailyQuestionLimit: number; // 20
-  freeTimes: string | null; // like "Mon–Fri, 10:00 AM – 6:00 PM (India time)"
+  freeTimes: string; // like "Mon–Fri, 10:00 AM – 6:00 PM (India time)"
   interviews: HrInterview[];
   people: HrPerson[];
+  calendar: CalendarStatus;
+  availability: Availability;
+};
+
+// ----- The HR side (public pages at /hr/{shareId}) -----
+
+export type PublicShare = {
+  candidateName: string;
+  firstName: string;
+  headline: string | null;
+  open: boolean;
+  closedReason: string | null;
+  dailyQuestionLimit: number;
+};
+
+export type Slot = { startsAt: string; endsAt: string };
+
+export type InterviewBrief = {
+  id: number;
+  startsAt: string;
+  endsAt: string;
+  meetLink: string | null;
+  status: string;
+};
+
+export type HrThreadItem = { id: number; title: string; updatedAt: string };
+
+export type HrMe = {
+  phone: string;
+  candidateName: string;
+  firstName: string;
+  headline: string | null;
+  questionsUsedToday: number;
+  dailyQuestionLimit: number;
+  threads: HrThreadItem[];
+  booking: InterviewBrief | null;
+};
+
+export type HrMessage = {
+  id: number;
+  kind: "question" | "booking";
+  question: string;
+  answer: string;
+  // "slots": the check_availability tool offered free times. "booked": a call was booked.
+  outcome: "answered" | "not_found" | "blocked" | "slots" | "booked";
+  sources: { section: string; chunkIndex: number }[];
+  steps: ChatStep[];
+  slots: Slot[];
+  interview: InterviewBrief | null;
+  createdAt: string;
+};
+
+export type HrThread = {
+  id: number;
+  title: string;
+  messages: HrMessage[];
+  questionsUsedToday: number;
+  dailyQuestionLimit: number;
 };
