@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* LEARN: These values become Tailwind classes.
+   Example: --color-ink gives you text-ink, bg-ink and border-ink. */
+@theme {
+  --color-ink: #17212b;
+  --color-muted: #52606d;
+  --color-line: #d9dee3;
+  --color-line-strong: #8995a1;
+  --color-ground: #f5f7f8;
+  --color-accent: #1b4fd1;
+  --color-accent-strong: #163fa8;
+  --color-accent-soft: #e8eefc;
+  --color-warn: #8a4300;
+  --color-warn-soft: #fff1e3;
+  --color-warn-line: #e8b98a;
+  --color-off: #3f4c58;
+  --color-off-soft: #e8ebee;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+}
+
+button:not(:disabled),
+label[for] {
+  cursor: pointer;
+}
