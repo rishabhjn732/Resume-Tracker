@@ -1,6 +1,6 @@
 # Resume Assistant: Frontend
 
-This is a Next.js project for learning. Login and candidate data come from the FastAPI backend. The chat answers still come from a fake agent.
+This is a Next.js project for learning. Login and resumes come from the FastAPI backend. The old HR chat demo under `/c/...` still uses a fake agent.
 
 ## Run the project
 
@@ -21,31 +21,57 @@ Open http://localhost:3000.
 Try this flow:
 
 1. Click the Google button and sign in.
-2. On the dashboard, click **Open the HR view**.
-3. Enter a phone number, like `+91 98765 43210`.
-4. Ask: `Does he have search experience?`
-5. Ask the same question again to see a cache hit.
-6. Try `Book a 30-minute call` and `Compare with my job description`.
+2. Upload a PDF or DOCX resume. Watch the 5 steps while it is read.
+3. Open **Test chat** and ask a few questions (needs the chat API, see below).
+4. Open **HR and interviews** to copy your HR link (needs the HR API, see below).
 
 To learn from the code, search for `LEARN` in the `src` folder.
 
-## URLs and files
+## Pages and files
 
-| URL | File | Runs where |
+| URL | What it shows | File |
 |---|---|---|
-| `/` | `src/app/page.tsx` | Server |
-| `/dashboard` | `src/app/dashboard/page.tsx` | Server, with small browser parts |
-| `/c/rishabh-jain-4821` | `src/app/c/[userId]/page.tsx` | Server, with a browser form |
-| `/c/rishabh-jain-4821/chat/abc123` | `src/app/c/[userId]/chat/[threadId]/page.tsx` | Server, then `ChatWindow` in the browser |
-| `POST /api/chat` | `src/app/api/chat/route.ts` | Server only |
+| `/` | Google login | `src/app/page.tsx` |
+| `/dashboard` | Opens your newest resume, or the first upload | `src/app/dashboard/page.tsx` |
+| `/dashboard/resumes/12` | **My resume**: list, upload, live steps, summary | `src/app/dashboard/resumes/[id]/page.tsx` → `ResumeView.tsx` |
+| `/dashboard/resumes/12/chat` | **Test chat**: 8 test questions with right/wrong checks | `.../[id]/chat/page.tsx` → `TestChat.tsx` |
+| `/dashboard/resumes/12/hr` | **HR and interviews**: link, interviews, HR activity | `.../[id]/hr/page.tsx` → `HrOverviewView.tsx` |
+| `/c/...` | Old HR chat demo (fake agent) | `src/app/c/[userId]/...` |
 
-## Fake parts to replace
+The browser never calls FastAPI directly. It calls the Next.js routes in `src/app/api/`, and they pass the request on with the login token (`src/lib/relay.ts`).
 
-| Fake now | Real later | File |
+## APIs the backend must add next
+
+The Test chat and HR pages are built, but the backend doesn't have these APIs yet. Until it does, those pages say "not switched on yet". All of them need `Authorization: Bearer <token>`, and only the resume's owner may use them. The types are in `src/lib/types.ts`.
+
+| Method and URL | Body | Answer |
 |---|---|---|
-| Word checks | FastAPI and LangGraph | `src/lib/mock-agent.ts` |
-| Chats and limits in server memory | Postgres | `src/lib/store.ts` |
-| Sample resume on the dashboard | Your own uploaded resume | `src/lib/mock-data.ts` |
+| `GET /api/resumes/{id}/test-chat` | none | `{ limit: 8, used, messages: TestChatMessage[] }` |
+| `POST /api/resumes/{id}/test-chat` | `{ question }` | `201` with one `TestChatMessage`, or `429` when all 8 are used |
+| `PUT /api/resumes/{id}/test-chat/{messageId}/feedback` | `{ verdict: "right" \| "wrong" \| null }` | `204` |
+| `GET /api/resumes/{id}/hr` | none | `{ shareId, linkEnabled, dailyQuestionLimit, freeTimes, interviews, people }` |
+| `PATCH /api/resumes/{id}/hr` | `{ linkEnabled }` | `200` |
+
+A `TestChatMessage` is:
+
+```json
+{
+  "id": 1,
+  "question": "Has Rishabh led a team?",
+  "answer": "Yes. At OfBusiness he led a team of 3 engineers...",
+  "outcome": "answered",
+  "sources": [{ "section": "Experience", "chunkIndex": 3 }],
+  "steps": [
+    { "key": "guardrail", "label": "Checked the question", "status": "passed", "tag": "Passed", "detail": "It is about the resume." },
+    { "key": "search", "label": "Searched your resume", "status": "passed", "tag": "1 part", "detail": "Found the closest parts." },
+    { "key": "answer", "label": "Wrote the answer", "status": "passed", "tag": "2.6s", "detail": "Used only those parts." }
+  ],
+  "verdict": null,
+  "createdAt": "2026-11-08T10:00:00Z"
+}
+```
+
+`outcome` is `answered`, `not_found` (the resume doesn't say) or `blocked` (the guardrail stopped an off-topic question). A step's `status` is `passed`, `warning` or `skipped`.
 
 ## How login works
 

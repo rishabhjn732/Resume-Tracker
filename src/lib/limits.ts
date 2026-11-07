@@ -17,3 +17,10 @@ export const limitSteps: AgentStep[] = [
     detail: "No model call, so no API cost.",
   },
 ];
+
+// Vercel can't pass bigger files through Next.js, and the backend allows 4 MB too.
+export const MAX_RESUME_BYTES = 4 * 1024 * 1024;
+export const RESUME_FILE_TYPES = [".pdf", ".docx"];
+
+// How many test questions a candidate can ask about each resume.
+export const TEST_QUESTION_LIMIT = 8;

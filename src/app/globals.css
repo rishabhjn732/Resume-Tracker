@@ -16,6 +16,8 @@
   --color-warn-line: #e8b98a;
   --color-off: #3f4c58;
   --color-off-soft: #e8ebee;
+  --color-ok: #1e6b34;
+  --color-ok-soft: #e6f4ea;
   --font-sans: "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
@@ -28,4 +30,37 @@ body {
 button:not(:disabled),
 label[for] {
   cursor: pointer;
+}
+
+/* The moving text on the step that is running now, like a "thinking" line. */
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 0%,
+    var(--color-muted) 40%,
+    var(--color-ink) 50%,
+    var(--color-muted) 60%,
+    var(--color-muted) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-shimmer {
+    animation: none;
+    background: none;
+    color: var(--color-muted);
+  }
 }

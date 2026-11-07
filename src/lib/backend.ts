@@ -1,4 +1,4 @@
-import type { Candidate, User } from "./types";
+import type { Candidate, HrOverview, ResumeDetail, ResumeList, TestChat, User } from "./types";
 
 // LEARN (server-only code): Only Server Components, Server Actions and Route Handlers
 // use this file. BACKEND_URL has no NEXT_PUBLIC_ prefix, so the browser never sees it.
@@ -16,7 +16,8 @@ export class BackendError extends Error {
   }
 }
 
-async function callBackend(path: string, init: RequestInit = {}): Promise<Response> {
+// Exported for Route Handlers that pass a browser request on to the backend.
+export async function callBackend(path: string, init: RequestInit = {}): Promise<Response> {
   try {
     // cache: "no-store" means: always ask the backend, never reuse an old answer.
     return await fetch(`${BACKEND_URL}${path}`, { ...init, cache: "no-store" });
@@ -59,4 +60,51 @@ export async function getCandidate(userId: string): Promise<Candidate | null> {
 
   const data: { userId: string; name: string; title: string } = await response.json();
   return { ...data, firstName: data.name.split(" ")[0] };
+}
+
+// ----- Resumes -----
+
+function authHeader(token: string) {
+  return { Authorization: `Bearer ${token}` };
+}
+
+// GET /api/resumes: your resumes, newest first.
+export async function getResumes(token: string): Promise<ResumeList> {
+  const response = await callBackend("/api/resumes", { headers: authHeader(token) });
+  if (response.status === 503) {
+    // S3, OpenAI or pgvector is not set up yet. Show the reason instead of an error page.
+    const body = await response.json().catch(() => null);
+    return { items: [], limit: 40, unavailableReason: body?.detail ?? "Resume upload is off." };
+  }
+  if (!response.ok) throw new BackendError("Could not load your resumes.", response.status);
+  return response.json();
+}
+
+// GET /api/resumes/{id}: one resume with its steps, summary and chunks.
+export async function getResume(token: string, id: number): Promise<ResumeDetail | null> {
+  const response = await callBackend(`/api/resumes/${id}`, { headers: authHeader(token) });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new BackendError("Could not load the resume.", response.status);
+  return response.json();
+}
+
+// The test chat and HR APIs come in the next backend step. Until then the backend
+// answers 404 (no such URL), 405 or 501. We return null, and the page says
+// "not switched on yet" instead of showing an error page.
+const NOT_BUILT_YET = [404, 405, 501, 503];
+
+// GET /api/resumes/{id}/test-chat: the test questions asked so far, and the limit (8).
+export async function getTestChat(token: string, id: number): Promise<TestChat | null> {
+  const response = await callBackend(`/api/resumes/${id}/test-chat`, { headers: authHeader(token) });
+  if (NOT_BUILT_YET.includes(response.status)) return null;
+  if (!response.ok) throw new BackendError("Could not load the test chat.", response.status);
+  return response.json();
+}
+
+// GET /api/resumes/{id}/hr: the share link, interviews and HR activity.
+export async function getHrOverview(token: string, id: number): Promise<HrOverview | null> {
+  const response = await callBackend(`/api/resumes/${id}/hr`, { headers: authHeader(token) });
+  if (NOT_BUILT_YET.includes(response.status)) return null;
+  if (!response.ok) throw new BackendError("Could not load HR activity.", response.status);
+  return response.json();
 }
